@@ -1,13 +1,8 @@
 // # Map Export
-// April 17 2022: hard coded to only export L2> planets if NOT within selection Within box everything will be exported. 
-
-// OLD notes:
-// now uses cfg.mapCleanup flag; 
+// April 17 2022: hard coded to only export L2> planets if NOT within selection. Inside selection box everything will be exported. 
 
 let viewport = ui.getViewport();
-let cleanseSelection = false;  //0 = false; do not cleanse
-//if(window.cfg) cleanseSelection = (window.cfg.mapCleanup==1);  //1=true
-cleanseSelection = 1;  //hardcoded to yes
+let cleanseSelection = true;  //hardcoded to yes
 class Plugin {
   constructor() {
     this.beginCoords = null;
@@ -21,7 +16,7 @@ class Plugin {
     this.xyWrapper.style.marginBottom = '10px';
 
     let msg = document.createElement('div');
-    msg.innerText = `Select an area to clean up. All planets <L3 will ve removed in this area. `;
+    msg.innerText = `Select a box to export all planets inside the box. Outside this box, only planets >=L2 will be exported.`;
 
     //    msg.innerText = `Click on the map to pin selection. Cleanup flag is ${cleanseSelection}`;
     this.beginXY = document.createElement('div');
@@ -117,7 +112,7 @@ class Plugin {
   generateMap() {
 
     if(cleanseSelection) {
-        console.log ("Cleasing map except for selected area...");
+        console.log ("Exporting only >=L2 except for inside selected area...");
 
         let chunks = ui.getExploredChunks();
         let chunksAsArray = Array.from(chunks);
@@ -125,7 +120,9 @@ class Plugin {
         let newChunk={};
 
         if (!this.beginCoords || !this.endCoords) {
-            console.log ("selection cannot be empty for cleansing");
+            console.log ("Selection cannot be empty for cleansing operation. ");
+            this.status.innerText = 'Please select an area.';
+            this.status.style.color = 'red';
         }
         
         let begin = {
@@ -163,31 +160,15 @@ class Plugin {
         return chunksClone;
 
     }
-
-    console.log("should never get here if cleansing Headers...");
-
-    let chunks = ui.getExploredChunks();
-    let chunksAsArray = Array.from(chunks);
-    if (this.beginCoords && this.endCoords) {
-      let begin = {
-        x: Math.min(this.beginCoords.x, this.endCoords.x),
-        y: Math.max(this.beginCoords.y, this.endCoords.y),
-      };
-      let end = {
-        x: Math.max(this.beginCoords.x, this.endCoords.x),
-        y: Math.min(this.beginCoords.y, this.endCoords.y),
-      };
-      chunksAsArray = chunksAsArray.filter(chunk => {
-        return this.intersectsXY(chunk, begin, end);
-//               || this.chunkPlayable(chunk);  // dont do this anymore on large chunks.
-      });
-    }
-    return chunksAsArray;
+    console.log("should never get here in cleansing mode...");
   }
 
-  // add L3+ planet filter here
-  // could add isPlanetMineable here too
   isPlanetPlayable (planetId) {
+    return df.getPlanetLevel(planetId) >=2;
+  }
+
+  //legacy code.  Could get fancy with filtering
+  isPlanetPlayableXXX (planetId) {
     let planet = df.getPlanetWithId(planetId);
    
     return (planet
@@ -227,7 +208,7 @@ class Plugin {
       let map = JSON.stringify(mapRaw);
       var blob = new Blob([map], { type: 'application/json' }),
           anchor = document.createElement('a');
-      anchor.download = 'map.json';
+      anchor.download = df.getContractAddress().substring(0, 6) + '_map.json';
       anchor.href = (window.webkitURL || window.URL).createObjectURL(blob);
       anchor.dataset.downloadurl = ['application/json', anchor.download, anchor.href].join(':');
       anchor.click();
