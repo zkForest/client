@@ -6,7 +6,7 @@
 // Resource intensive plugin - dont zoom out too much
 // Hover over text inside the plugin to get a tooltip
 
-const quadrantSize = 1000; // smaller size means more detail but also longer computation
+const quadrantSize = 2500; // smaller size means more detail but also longer computation
 
 const biomeColorAccuracy = 3; // smaller = more accurate & more lag, 1 is best accuracy
 
