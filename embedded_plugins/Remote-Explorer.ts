@@ -319,10 +319,10 @@ class RemoteExplorerPlugin implements DFPlugin {
     this.miners = [];
     this.id = 0;
 
-    this.addMiner('http://0.0.0.0:8000/mine', 'spiral', 256);
+    this.addMiner('http://0.0.0.0:8000/mine', 'spiral', 512);
   }
 
-  addMiner = (url: string, patternType = 'spiral', chunkSize = 256) => {
+  addMiner = (url: string, patternType = 'spiral', chunkSize = 512) => {
     // TODO: Somehow set a default coords
     const pattern = getPattern({ x: 0, y: 0 }, patternType, chunkSize);
     const miner = Miner.create(
