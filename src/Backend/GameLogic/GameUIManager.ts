@@ -1,6 +1,6 @@
 import { EMPTY_ADDRESS } from '@darkforest_eth/constants';
 import { Monomitter, monomitter } from '@darkforest_eth/events';
-import { biomeName, isLocatable, isSpaceShip } from '@darkforest_eth/gamelogic';
+import { biomeName, isActivated, isLocatable, isSpaceShip } from '@darkforest_eth/gamelogic';
 import { planetHasBonus } from '@darkforest_eth/hexgen';
 import { EthConnection } from '@darkforest_eth/network';
 import { GameGLManager, Renderer } from '@darkforest_eth/renderer';
@@ -8,6 +8,8 @@ import { isUnconfirmedMoveTx } from '@darkforest_eth/serde';
 import {
   Artifact,
   ArtifactId,
+  ArtifactRarityNames,
+  ArtifactType,
   BaseRenderer,
   Biome,
   Chunk,
@@ -509,6 +511,28 @@ class GameUIManager extends EventEmitter {
         // move initiated if enough forces
         const from = mouseDownPlanet;
         const to = mouseUpOverPlanet;
+
+        const activePhotoidCannon = from.heldArtifactIds
+          .map((a) => df.getArtifactWithId(a))
+          .find((a) => a?.artifactType === ArtifactType.PhotoidCannon && isActivated(a));
+
+        if (activePhotoidCannon !== undefined) {
+          const photoidActiveTimestamp =
+            activePhotoidCannon.lastActivated * 1000 +
+            this.contractConstants.PHOTOID_ACTIVATION_DELAY * 1000;
+
+          const isPhotoidActive = photoidActiveTimestamp - Date.now() <= 0;
+          const photoidRarity = ArtifactRarityNames[activePhotoidCannon.rarity];
+
+          if (isPhotoidActive) {
+            const confirmMessage = `Are you sure you want to use the ${photoidRarity} photoid cannon on this planet?`;
+            const confirmation = confirm(confirmMessage);
+
+            if (!confirmation) {
+              return;
+            }
+          }
+        }
 
         // TODO: the following code block needs to be in a Planet class
         let effectiveEnergy = from.energy;
