@@ -2,6 +2,8 @@
 // April 17 2022: hard coded to only export L2> planets if NOT within selection. Inside selection box everything will be exported. 
 
 let viewport = ui.getViewport();
+let minLvl1 = 2;  //max export level if inside of selection
+let minLvl2 = 5;  //max export level if ouside of selection
 let cleanseSelection = true;  //hardcoded to yes
 class Plugin {
   constructor() {
@@ -15,10 +17,23 @@ class Plugin {
     this.xyWrapper = document.createElement('div');
     this.xyWrapper.style.marginBottom = '10px';
 
-    let msg = document.createElement('div');
-    msg.innerText = `Select a box to export all planets inside the box. Outside this box, only planets >=L2 will be exported.`;
+    let createInput = (placeholder, def) => {
+      let e = document.createElement("input");
+      if (def) e.value = def;
+      e.placeholder = placeholder;
+      e.type = "text";
+      e.style.background = `transparent`;
+      e.style.border = `1px solid #7f7f7f`;
+      e.style.borderRadius = `3px`;
+      e.style.padding = `4px 8px`;
+      e.style.width = `100%`;
+      e.style.marginBottom = `4px`;
+      return e;
+    };
 
-    //    msg.innerText = `Click on the map to pin selection. Cleanup flag is ${cleanseSelection}`;
+    this.input1 = createInput(`inside of selection: export L>=${minLvl1}`);
+    this.input2  = createInput(`outside of selection: export L>=${minLvl2}`);
+
     this.beginXY = document.createElement('div');
     this.endXY = document.createElement('div');
 
@@ -32,7 +47,8 @@ class Plugin {
       this.endXY.innerText = '';
     }
 
-    this.xyWrapper.appendChild(msg);
+    this.xyWrapper.appendChild(this.input1);
+    this.xyWrapper.appendChild(this.input2);
     this.xyWrapper.appendChild(this.beginXY);
     this.xyWrapper.appendChild(this.endXY);
     this.xyWrapper.appendChild(clear);
@@ -112,12 +128,19 @@ class Plugin {
   generateMap() {
 
     if(cleanseSelection) {
-        console.log ("Exporting only >=L2 except for inside selected area...");
+
+//      console.log (`Exporting >=L${this.input1.value} inside selected area and L${this.input2.value} outside`);
+       minLvl1 = !isNaN(parseInt(this.input1.value))? parseInt(this.input1.value) : minLvl1;
+       minLvl2 = !isNaN(parseInt(this.input2.value))? parseInt(this.input1.value) : minLvl2;
+
+        console.log (`Exporting >=L${minLvl1} inside selected area and L${minLvl2} outside`);
 
         let chunks = ui.getExploredChunks();
         let chunksAsArray = Array.from(chunks);
         let chunksClone=[];
         let newChunk={};
+
+//        console.log(chunksAsArray);
 
         if (!this.beginCoords || !this.endCoords) {
             console.log ("Selection cannot be empty for cleansing operation. ");
@@ -135,28 +158,26 @@ class Plugin {
         };
 
         for (let i=0; i<chunksAsArray.length; ++i) {
-            if(this.intersectsXY(chunksAsArray[i], begin, end) ) {
-               chunksClone.push(chunksAsArray[i]);
-            } else {
+          let filtered=[]; 
+          newChunk={};
+          newChunk.chunkFootprint = chunksAsArray[i].chunkFootprint;
+          newChunk.perlin = chunksAsArray[i].perlin;
 
-//               console.log ("cleansing...", i);
+          if(chunksAsArray[i].planetLocations.length >0)  {
 
-               newChunk.chunkFootprint = chunksAsArray[i].chunkFootprint;
-               newChunk.perlin = chunksAsArray[i].perlin;
-                if(chunksAsArray[i].planetLocations.length >0)  {
-                   let filtered =  chunksAsArray[i].planetLocations
-                       .filter ((p) => this.isPlanetPlayable(p.hash));  //greater than Lvl3
-
-//                   .filter ((p) => df.getPlanetWithId(p.hash).planetLevel >=3);  //greater than Lvl3
-
-                newChunk.planetLocations = filtered;
-
-//                    console.log(i, chunksAsArray[i], newChunk);
-            chunksClone.push(Object.assign({}, newChunk));
-                }
+            if(this.intersectsXY(chunksAsArray[i], begin, end) ) {  //inside the selection
+              filtered =  chunksAsArray[i].planetLocations
+                .filter ((p) => df.getGameObjects().planetLevelFromHexPerlin(p.hash) >=minLvl1);  //greater than Lvl3
+            }  else  {
+              filtered =  chunksAsArray[i].planetLocations
+                .filter ((p) => df.getGameObjects().planetLevelFromHexPerlin(p.hash) >=minLvl2);  //greater than Lvl3
             }
+          }
+          newChunk.planetLocations = filtered;
+          chunksClone.push(Object.assign({}, newChunk));
+
         }
-//        console.log(chunksClone);
+//        console.log(chunksAsArray,chunksClone);
         return chunksClone;
 
     }

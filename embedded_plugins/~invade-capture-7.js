@@ -1,4 +1,6 @@
 let divStatus;
+let maxLevelToCapture=7;
+let showOnceText = `This plugin will NOT capture planet >=L${maxLevelToCapture}`;
 let divPlanetListBlocks;
 let divPlanetListEnergy;
 let divLog;
@@ -118,7 +120,7 @@ async function loop() {
                 planetsWaitingForEnergy.push(p);
                 continue;
             }
-            if(p.planetLevel <=6) {  //added special for zkForest team!!
+            if(p.planetLevel <maxLevelToCapture) {  //added special for zkForest team!!
                 capturePlanet(p);
                 await sleep(3000);
             }
@@ -162,6 +164,12 @@ function init() { }
 function render(div) {
     div.height = "300px";
     divStatus = document.createElement("div");
+    if(showOnceText!="") {
+        let divShowOnce = document.createElement("div");
+        divShowOnce.innerHTML = showOnceText;
+        showOnceText ="";
+        div.appendChild(divShowOnce);
+    }
     div.appendChild(divStatus);
     divPlanetListBlocks = document.createElement("div");
     divPlanetListBlocks.style.backgroundColor = "#006";

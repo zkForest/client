@@ -34,7 +34,7 @@ function getButtonStyle(width = "100px", height = "30px") {
     color: "white",
     textAlign: "center",
     transition: "background-color 0.2s, color 0.2s",
-    borderRadius: "3px"
+    borderRadius: "2px"
   };
   return res;
 }
@@ -89,6 +89,20 @@ function drawRound(ctx, p, color, width, alpha = 1) {
   ctx.stroke();
   return `(${p.location.coords.x},${p.location.coords.y})`;
 }
+function drawCenter(ctx, tx, ty, color = "#FFC0CB", width = 1, alpha = 1) {
+  const viewport = ui.getViewport();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.globalAlpha = alpha;
+  let coords = { x: tx, y: ty };
+  const { x, y } = viewport.worldToCanvasCoords(coords);
+  for (let i = 100; i <= df.worldRadius; i += 1e4) {
+    const trueRange = viewport.worldToCanvasDist(i);
+    ctx.beginPath();
+    ctx.arc(x, y, trueRange, 0, 2 * Math.PI);
+    ctx.stroke();
+  }
+}
 
 // plugins/logicForPlanetState.js
 import {
@@ -141,7 +155,7 @@ var HAVE_ARTIFACT = "pink";
 var notOwnerAddress = "0x0000000000000000000000000000000000000000";
 var WORMHOLE_COOLDOWN_TIME = 48 * 60 * 60;
 var ARTIFACT_COOLDOWN_TIME = 24 * 60 * 60;
-var PHOTOID_CANNON_WAIT_TIME = 4 * 60 * 60;
+var PHOTOID_CANNON_WAIT_TIME = df.contractConstants.PHOTOID_ACTIVATION_DELAY;
 var MAX_MOVE_SILVER_TIME = 60 * 60 * 2;
 var MAX_CATCH_INVADED_MOVE_TIME = 60 * 60;
 var MAX_WAIT_TIME_FOR_CENTER_ENERGY = 60 * 60;
@@ -231,10 +245,10 @@ var isActivate = (artifact) => {
   return artifact.lastDeactivated < artifact.lastActivated;
 };
 var canActivate = (artifact) => {
-  if (isNormalArtifact(artifact) === false)
-    return 0;
   if (canUse(artifact) === false)
     return false;
+  if (isNormalArtifact(artifact) === false)
+    return 0;
   if (artifact.lastActivated === 0)
     return true;
   if (artifact.lastDeactivated > artifact.lastActivated) {
@@ -290,6 +304,11 @@ var planetWithOpenFire = (plt) => {
   }
   return false;
 };
+
+// plugins/logicForArtifactOpen.js
+function isProspectable(planet) {
+  return df.isPlanetMineable(planet) && planet.prospectedBlockNumber === void 0 && planet.hasTriedFindingArtifact === false;
+}
 
 // plugins/sectionShow.js
 var showPlanets = [];
@@ -347,6 +366,11 @@ function switchShowHaveCaptured(frontFilter, setInfo) {
   switchShowPlanets(planetFilter, setInfo);
   colorForShowPlanets = HAVE_CAPUTRED;
 }
+function switchShowNotCaptureYet(frontFilter, setInfo) {
+  let planetFilter = (planet) => frontFilter(planet) && haveCaptured(planet) === false;
+  switchShowPlanets(planetFilter, setInfo);
+  colorForShowPlanets = "lightgreen";
+}
 function switchShowHaveArtifact(frontFilter, setInfo) {
   let planetFilter = (planet) => frontFilter(planet) && hasArtifactsCanActivate(planet);
   switchShowPlanets(planetFilter, setInfo);
@@ -365,6 +389,15 @@ function switchShowPlanetWithOpenFire(frontFilter, setInfo) {
   };
   switchShowPlanets(planetFilter, setInfo);
   colorForShowPlanets = "red";
+}
+function switchShowAllPlanets(frontFilter, setInfo) {
+  let planetFilter = (p) => {
+    if (isFoundry(p))
+      return frontFilter(p) && isProspectable(p);
+    return frontFilter(p);
+  };
+  switchShowPlanets(planetFilter, setInfo);
+  colorForShowPlanets = "pink";
 }
 
 // plugins/logicForAccount.js
@@ -504,7 +537,7 @@ function dfGaia() {
       return true;
     if (hasQuasar && isQuasar(planet))
       return true;
-    return true;
+    return false;
   }
   function judgeSpaceType(plt) {
     if (ohBlackSpace && inBlackSpace(plt))
@@ -553,6 +586,9 @@ function dfGaia() {
   function showHaveCaptured() {
     switchShowHaveCaptured(frontFilter, setInfo);
   }
+  function showNotCaptureYet() {
+    switchShowNotCaptureYet(frontFilter, setInfo);
+  }
   function showHaveArtifact() {
     switchShowHaveArtifact(frontFilter, setInfo);
   }
@@ -561,6 +597,10 @@ function dfGaia() {
   }
   function showOpenFire() {
     switchShowPlanetWithOpenFire(frontFilter, setInfo);
+  }
+  function showAll() {
+    console.log("showAll");
+    switchShowAllPlanets(frontFilter, setInfo);
   }
   return html2`<div style=${divStyle} >
     <h1>DF GAIA SHOW</h1>
@@ -588,11 +628,14 @@ function dfGaia() {
     
     <button style=${getButtonStyle("150px", "25px")} onClick=${showCanCapture}> can capture </button>
     <button style=${getButtonStyle("150px", "25px")} onClick=${showHaveCaptured}> have captured  </button>
+    <button style=${getButtonStyle("150px", "25px")} onClick=${showNotCaptureYet}> not capture yet </button>
     <button style=${getButtonStyle("200px", "25px")} onClick=${showInvadeButNotCapture}> invade but not capture </button>
 
     <button style=${getButtonStyle("200px", "25px")} onClick=${showHaveArtifact}>have artifact </button>
     <button style=${getButtonStyle("250px", "25px")} onClick=${showActivePhotoidCannon}> just active Photoid Cannon </button>
     <button style=${getButtonStyle("250px", "25px")} onClick=${showOpenFire}> Photoid Cannon Can Fire Now </button>
+    <button style=${getButtonStyle("250px", "25px")} onClick=${showAll}> show all </button>
+
     <div id=devshow style=${getInfoListStyle("100px")}>${info}</div>
     </div>`;
 }
@@ -607,6 +650,7 @@ var Plugin = class {
     render(html2`<${dfGaia}/>`, container);
   }
   draw(ctx) {
+    drawCenter(ctx, 0, 0);
     sectionShowDraw(ctx);
   }
   destroy() {
