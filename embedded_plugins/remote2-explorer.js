@@ -300,7 +300,17 @@ class RemoteExplorerPlugin {
   constructor() {
     this.miners = [];
     this.id = 0;
-    this.addMiner('http://0.0.0.0:8000/mine', 'spiral', 512);
+    this.addMiner('https://057e-98-51-95-212.ngrok.io/explore', 'spiral', 512);
+    this.addMiner('https://057e-98-51-95-212.ngrok.io/explore', 'spiral', 512);
+    this.addMiner('https://057e-98-51-95-212.ngrok.io/explore', 'spiral', 512);
+    this.addMiner('https://057e-98-51-95-212.ngrok.io/explore', 'spiral', 512);
+    this.addMiner('https://057e-98-51-95-212.ngrok.io/explore', 'spiral', 512);
+    this.addMiner('https://923f-85-13-109-25.eu.ngrok.io/explore', 'spiral', 512);
+    this.addMiner('https://923f-85-13-109-25.eu.ngrok.io/explore', 'spiral', 512);
+    this.addMiner('https://923f-85-13-109-25.eu.ngrok.io/explore', 'spiral', 512);
+    this.addMiner('https://923f-85-13-109-25.eu.ngrok.io/explore', 'spiral', 512);
+    this.addMiner('https://923f-85-13-109-25.eu.ngrok.io/explore', 'spiral', 512);
+    this.addMiner('https://923f-85-13-109-25.eu.ngrok.io/explore', 'spiral', 512);
   }
 
   addMiner = (url, patternType = 'spiral', chunkSize = 512) => {
